@@ -17,19 +17,24 @@ jobs:
       - name: Unzip source bundle
         run: unzip -o body_tracker_professional_v4_online_ready.zip -d src
 
-      - name: Show extracted files
+      - name: Show extracted structure
         run: |
-          echo "SRC ICERIGI:"
+          echo "=== SRC ==="
           ls -la src
-          echo "ALT KLASORLER:"
-          find src -maxdepth 2 -type f | head -100
+          echo "=== FIRST 3 LEVELS ==="
+          find src -maxdepth 3 | sed -n '1,200p'
 
-      - name: Find project dir
-        id: find_project
+      - name: Find gradlew
+        id: find_gradlew
         run: |
-          PROJECT_DIR=$(find src -name gradlew -type f | head -1 | xargs dirname)
+          GRADLEW_PATH=$(find src -name gradlew -type f | head -1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "gradlew bulunamadi"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
           echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
-          echo "Bulunan klasor: $PROJECT_DIR"
+          echo "Bulunan proje klasoru: $PROJECT_DIR"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -44,22 +49,23 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: ""
 
       - name: Install Android packages
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Make gradlew executable
-        working-directory: ${{ steps.find_project.outputs.project_dir }}
-        run: chmod +x ./gradlew
+        working-directory: ${{ steps.find_gradlew.outputs.project_dir }}
+        run: chmod +x gradlew
 
       - name: Build debug APK
-        working-directory: ${{ steps.find_project.outputs.project_dir }}
-        run: ./gradlew --no-daemon assembleDebug
+        working-directory: ${{ steps.find_gradlew.outputs.project_dir }}
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Find APK
+        run: find src -path "*/app/build/outputs/apk/debug/*.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: body-tracker-debug-apk
-          path: ${{ steps.find_project.outputs.project_dir }}/app/build/outputs/apk/debug/app-debug.apk
+          path: src/**/app/build/outputs/apk/debug/*.apk

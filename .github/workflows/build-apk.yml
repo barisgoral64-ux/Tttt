@@ -15,7 +15,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y unzip
 
       - name: Unzip source bundle
-        run: unzip -o body_tracker_professional_v9_search_cards.zip -d src
+        run: unzip -o body_tracker_professional_v15_products_ui.zip -d src
 
       - name: Show extracted structure
         run: |

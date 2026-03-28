@@ -43,7 +43,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: src/bodyv2
-        run: gradle assembleDebug --no-daemon
+        run: gradle assembleDebug --stacktrace --info --no-daemon
 
       - name: Find APK
         run: find src/bodyv2 -path "*/app/build/outputs/apk/debug/*.apk"

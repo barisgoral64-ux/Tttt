@@ -3,6 +3,9 @@ name: Build Release APK from ZIP
 on:
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-release-apk:
     runs-on: ubuntu-latest
@@ -10,28 +13,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install unzip
-        run: sudo apt-get update && sudo apt-get install -y unzip
-
-      - name: Unzip source bundle
-        run: unzip -o body_tracker_professional_v20_notifications_update_fix.zip -d src
-
-      - name: Show extracted structure
-        run: |
-          echo "=== TOP LEVEL ==="
-          find src -maxdepth 3 | sed -n '1,200p'
-
-      - name: Find Android project directory
-        id: find_project
-        run: |
-          PROJECT_DIR=$(find src -type f \( -name "settings.gradle.kts" -o -name "settings.gradle" \) | head -1 | xargs dirname)
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Android project directory not found"
-            exit 1
-          fi
-          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
-          echo "Found project dir: $PROJECT_DIR"
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -46,20 +27,24 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android packages
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-
-      - name: Grant execute permission for gradlew
-        working-directory: ${{ steps.find_project.outputs.project_dir }}
         run: |
-          if [ -f ./gradlew ]; then
-            chmod +x ./gradlew
-          fi
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Unzip source bundle
+        run: unzip -o body_tracker_professional_v20_notifications_update_fix_patched.zip -d src
+
+      - name: Show extracted structure
+        run: |
+          echo "=== TOP LEVEL ==="
+          find src -maxdepth 3 | sed -n '1,200p'
 
       - name: Build release APK and capture log
-        working-directory: ${{ steps.find_project.outputs.project_dir }}
+        working-directory: src
         run: |
           set -o pipefail
-          if [ -f ./gradlew ]; then
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
             ./gradlew assembleRelease --stacktrace --info --no-daemon 2>&1 | tee build.log
             exit ${PIPESTATUS[0]}
           else
@@ -72,13 +57,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: ${{ steps.find_project.outputs.project_dir }}/build.log
+          path: src/build.log
 
       - name: Upload release APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: body-tracker-release-apk
-          path: |
-            ${{ steps.find_project.outputs.project_dir }}/app/build/outputs/apk/release/*.apk
-            ${{ steps.find_project.outputs.project_dir }}/app/build/outputs/apk/**/*.apk
+          name: forever-danisan-takip-release-apk
+          path: src/app/build/outputs/apk/release/*.apk

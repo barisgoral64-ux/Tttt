@@ -1,4 +1,4 @@
-name: Build Signed Release APK from ZIP
+name: Build Release APK from ZIP
 
 on:
   workflow_dispatch:
@@ -41,8 +41,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: "8.7"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -50,12 +48,24 @@ jobs:
       - name: Install Android packages
         run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Build signed release APK and capture log
+      - name: Grant execute permission for gradlew
+        working-directory: ${{ steps.find_project.outputs.project_dir }}
+        run: |
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+          fi
+
+      - name: Build release APK and capture log
         working-directory: ${{ steps.find_project.outputs.project_dir }}
         run: |
           set -o pipefail
-          gradle assembleRelease --stacktrace --info --no-daemon 2>&1 | tee build.log
-          exit ${PIPESTATUS[0]}
+          if [ -f ./gradlew ]; then
+            ./gradlew assembleRelease --stacktrace --info --no-daemon 2>&1 | tee build.log
+            exit ${PIPESTATUS[0]}
+          else
+            gradle assembleRelease --stacktrace --info --no-daemon 2>&1 | tee build.log
+            exit ${PIPESTATUS[0]}
+          fi
 
       - name: Upload build logs
         if: always()
@@ -64,9 +74,11 @@ jobs:
           name: build-logs
           path: ${{ steps.find_project.outputs.project_dir }}/build.log
 
-      - name: Upload signed release APK
+      - name: Upload release APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: forever-danisan-takip-release-apk
-          path: ${{ steps.find_project.outputs.project_dir }}/app/build/outputs/apk/release/*.apk
+          name: body-tracker-release-apk
+          path: |
+            ${{ steps.find_project.outputs.project_dir }}/app/build/outputs/apk/release/*.apk
+            ${{ steps.find_project.outputs.project_dir }}/app/build/outputs/apk/**/*.apk

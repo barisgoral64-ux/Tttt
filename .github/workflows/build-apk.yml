@@ -15,7 +15,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y unzip
 
       - name: Unzip source bundle
-        run: unzip -o body_tracker_professional_v17_products_notifications.zip -d src
+        run: unzip -o body_tracker_professional_v18_forever_update_clean.zip -d src
 
       - name: Show extracted structure
         run: |

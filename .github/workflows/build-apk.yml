@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v20_analysis_pdf_bar_refresh.zip
+      ZIP_NAME: body_tracker_professional_v20_pdf_layout_fixed.zip
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

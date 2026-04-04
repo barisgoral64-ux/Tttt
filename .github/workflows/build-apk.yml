@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v20_planned_refresh.zip
+      ZIP_NAME: body_tracker_professional_v20_user_friendly_update_icon_reverted.zip
 
     steps:
       - name: Checkout repository

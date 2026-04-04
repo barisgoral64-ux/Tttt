@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v20_pdf_layout_fixed_nativecanvas_fix.zip
+      ZIP_NAME: body_tracker_professional_v20_takviye_pdf_title_fixed.zip
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

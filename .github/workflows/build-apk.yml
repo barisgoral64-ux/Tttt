@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v20_takviye_measurement_linked_lazyrow_fix.zip
+      ZIP_NAME: body_tracker_professional_v23_kurumsal_menu_bildirim_fix (1).zip
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

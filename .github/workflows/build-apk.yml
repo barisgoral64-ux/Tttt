@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v42_visible_build_errors.zip
+      ZIP_NAME: body_tracker_professional_v43_sdk_license_pipefix.zip
       BUILD_LOG: build.log
 
     steps:
@@ -58,8 +58,9 @@ jobs:
 
       - name: Install Android packages
         run: |
+          set +o pipefail
+          yes | sdkmanager --licenses 2>&1 | tee -a "$BUILD_LOG" || true
           set -o pipefail
-          yes | sdkmanager --licenses 2>&1 | tee -a "$BUILD_LOG"
           sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>&1 | tee -a "$BUILD_LOG"
 
       - name: Unzip source bundle

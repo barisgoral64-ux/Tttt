@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v43_sdk_license_pipefix.zip
+      ZIP_NAME: body_tracker_professional_v44_kotlin_compile_fix.zip
       BUILD_LOG: build.log
 
     steps:

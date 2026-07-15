@@ -1,0 +1,120 @@
+name: Build Signed Release APK from ZIP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-release-apk:
+    runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      ZIP_NAME: body_tracker_professional_v41_github_apk_fix.zip
+      BUILD_LOG: build.log
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize build log
+        run: |
+          : > "$BUILD_LOG"
+          echo "Build started at $(date -u)" | tee -a "$BUILD_LOG"
+          echo "Workspace: $GITHUB_WORKSPACE" | tee -a "$BUILD_LOG"
+
+      - name: Show repo files
+        run: |
+          echo "=== REPOSITORY ROOT ===" | tee -a "$BUILD_LOG"
+          ls -la 2>&1 | tee -a "$BUILD_LOG"
+
+      - name: Verify ZIP exists
+        run: |
+          if [ ! -f "$ZIP_NAME" ]; then
+            echo "ZIP file not found by exact name: $ZIP_NAME" | tee -a "$BUILD_LOG"
+            CANDIDATE="$(ls -1 body_tracker*.zip *.zip 2>/dev/null | head -n 1 || true)"
+            if [ -z "$CANDIDATE" ]; then
+              echo "No source ZIP found in repository root." | tee -a "$BUILD_LOG"
+              exit 1
+            fi
+            echo "Using fallback ZIP: $CANDIDATE" | tee -a "$BUILD_LOG"
+            echo "ZIP_NAME=$CANDIDATE" >> "$GITHUB_ENV"
+          else
+            echo "ZIP found: $ZIP_NAME" | tee -a "$BUILD_LOG"
+          fi
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "8.7"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          set -o pipefail
+          yes | sdkmanager --licenses 2>&1 | tee -a "$BUILD_LOG"
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>&1 | tee -a "$BUILD_LOG"
+
+      - name: Unzip source bundle
+        run: |
+          rm -rf src
+          mkdir -p src
+          unzip -o "$ZIP_NAME" -d src 2>&1 | tee -a "$BUILD_LOG"
+
+      - name: Find Android project directory
+        id: find_project
+        run: |
+          PROJECT_FILE="$(find src -type f \( -name "settings.gradle.kts" -o -name "settings.gradle" \) | head -n 1 || true)"
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "Android project directory not found" | tee -a "$BUILD_LOG"
+            find src -maxdepth 3 -type f | sort | head -n 120 | tee -a "$BUILD_LOG"
+            exit 1
+          fi
+          PROJECT_DIR="$(dirname "$PROJECT_FILE")"
+          echo "Found project dir: $PROJECT_DIR" | tee -a "$BUILD_LOG"
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release keystore
+        working-directory: ${{ steps.find_project.outputs.project_dir }}
+        run: |
+          test -f app/forever-release.jks 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+          test -f keystore.properties 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+          echo "Release keystore and keystore.properties found." | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+
+      - name: Build signed release APK and capture log
+        working-directory: ${{ steps.find_project.outputs.project_dir }}
+        run: |
+          set -o pipefail
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleRelease --stacktrace --info --no-daemon 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+            exit ${PIPESTATUS[0]}
+          else
+            gradle assembleRelease --stacktrace --info --no-daemon 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+            exit ${PIPESTATUS[0]}
+          fi
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build.log
+          if-no-files-found: warn
+
+      - name: Upload signed release APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forever-danisan-takip-signed-update-apk
+          path: |
+            src/**/app/build/outputs/apk/release/*.apk
+            src/**/build/outputs/apk/release/*.apk
+          if-no-files-found: error

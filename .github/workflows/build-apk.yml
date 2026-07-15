@@ -9,7 +9,7 @@ jobs:
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ZIP_NAME: body_tracker_professional_v41_github_apk_fix.zip
+      ZIP_NAME: body_tracker_professional_v42_visible_build_errors.zip
       BUILD_LOG: build.log
 
     steps:
@@ -92,6 +92,13 @@ jobs:
         working-directory: ${{ steps.find_project.outputs.project_dir }}
         run: |
           set -o pipefail
+          echo "=== GRADLE VERSION ===" | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+          if [ -f "./gradlew" ]; then
+            ./gradlew --version 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+          else
+            gradle --version 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
+          fi
+          echo "=== START ASSEMBLE RELEASE ===" | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
             ./gradlew assembleRelease --stacktrace --info --no-daemon 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
@@ -100,6 +107,29 @@ jobs:
             gradle assembleRelease --stacktrace --info --no-daemon 2>&1 | tee -a "$GITHUB_WORKSPACE/$BUILD_LOG"
             exit ${PIPESTATUS[0]}
           fi
+
+      - name: Print build log tail
+        if: always()
+        run: |
+          echo "=== BUILD LOG TAIL ==="
+          if [ -f "$BUILD_LOG" ]; then
+            tail -n 220 "$BUILD_LOG"
+            {
+              echo "## Build log tail"
+              echo '```'
+              tail -n 120 "$BUILD_LOG"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "build.log was not created"
+            echo "build.log was not created" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: List APK outputs
+        if: always()
+        run: |
+          echo "=== APK OUTPUTS ===" | tee -a "$BUILD_LOG"
+          find src -path "*/build/outputs/apk/*" -type f -print 2>/dev/null | tee -a "$BUILD_LOG" || true
 
       - name: Upload build logs
         if: always()
